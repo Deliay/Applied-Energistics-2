@@ -216,20 +216,7 @@ public final class CraftingCPUCluster implements IAECluster, ICraftingCPU {
     @Nullable
     @Override
     public CraftingJobStatus getJobStatus() {
-        var finalOutput = craftingLogic.getFinalJobOutput();
-        if (finalOutput != null) {
-            var elapsedTimeTracker = craftingLogic.getElapsedTimeTracker();
-            var progress = Math.max(
-                    0,
-                    elapsedTimeTracker.getStartItemCount() - elapsedTimeTracker.getRemainingItemCount());
-            return new CraftingJobStatus(
-                    finalOutput,
-                    elapsedTimeTracker.getStartItemCount(),
-                    progress,
-                    elapsedTimeTracker.getElapsedTime());
-        } else {
-            return null;
-        }
+        return craftingLogic.getJobStatus();
     }
 
     @Override

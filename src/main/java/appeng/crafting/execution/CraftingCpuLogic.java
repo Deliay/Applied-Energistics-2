@@ -22,6 +22,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import appeng.api.networking.crafting.*;
+import appeng.api.util.AECraftEventSubscriber;
 import com.google.common.base.Preconditions;
 
 import org.jetbrains.annotations.Nullable;
@@ -34,10 +36,6 @@ import appeng.api.config.Actionable;
 import appeng.api.config.PowerMultiplier;
 import appeng.api.features.IPlayerRegistry;
 import appeng.api.networking.IGrid;
-import appeng.api.networking.crafting.ICraftingLink;
-import appeng.api.networking.crafting.ICraftingPlan;
-import appeng.api.networking.crafting.ICraftingRequester;
-import appeng.api.networking.crafting.ICraftingSubmitResult;
 import appeng.api.networking.energy.IEnergyService;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
@@ -111,8 +109,9 @@ public class CraftingCpuLogic {
         cluster.updateOutput(plan.finalOutput());
         cluster.markDirty();
 
-        // TODO: post monitor difference?
+        AECraftEventSubscriber.notify(getJobStatus(), AECraftEventSubscriber.Status.STARTED);
 
+        // TODO: post monitor difference?
         notifyJobOwner(job, CraftingJobStatusPacket.Status.STARTED);
 
         // Non-standalone jobs need another link for the requester, and both links need to be submitted to the cache.
@@ -339,7 +338,8 @@ public class CraftingCpuLogic {
                 postChange(output.what());
             }
         }
-
+        AECraftEventSubscriber.notify(getJobStatus(),
+            success ? AECraftEventSubscriber.Status.DONE : AECraftEventSubscriber.Status.CANCELLED);
         notifyJobOwner(job,
                 success ? CraftingJobStatusPacket.Status.FINISHED : CraftingJobStatusPacket.Status.CANCELLED);
 
@@ -348,6 +348,23 @@ public class CraftingCpuLogic {
 
         // Store all remaining items.
         this.storeItems();
+    }
+
+    public CraftingJobStatus getJobStatus() {
+        var finalOutput = getFinalJobOutput();
+        if (finalOutput != null) {
+            var elapsedTimeTracker = getElapsedTimeTracker();
+            var progress = Math.max(
+                0,
+                elapsedTimeTracker.getStartItemCount() - elapsedTimeTracker.getRemainingItemCount());
+            return new CraftingJobStatus(
+                finalOutput,
+                elapsedTimeTracker.getStartItemCount(),
+                progress,
+                elapsedTimeTracker.getElapsedTime());
+        } else {
+            return null;
+        }
     }
 
     /**
