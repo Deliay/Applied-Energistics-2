@@ -2,6 +2,7 @@ package appeng.api.util;
 
 import appeng.api.networking.crafting.CraftingJobStatus;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
@@ -14,7 +15,7 @@ public class AECraftEventSubscriber {
     public interface Handler {
         void handle(CraftingJobStatus job, Status status);
     }
-    private static Map<Object, BiConsumer<CraftingJobStatus, Status>> _consumers;
+    private static final Map<Object, BiConsumer<CraftingJobStatus, Status>> _consumers = new HashMap<>();
 
     public static <T extends Handler> void register(T handlerClass) {
         _consumers.remove(handlerClass);
@@ -23,8 +24,12 @@ public class AECraftEventSubscriber {
     }
 
     public static void notify(CraftingJobStatus job, Status status) {
-        for (BiConsumer<CraftingJobStatus, Status> value : _consumers.values()) {
-            value.accept(job, status);
+        try {
+            for (BiConsumer<CraftingJobStatus, Status> value : _consumers.values()) {
+                value.accept(job, status);
+            }
+        } catch (Exception e) {
+            // ignored
         }
     }
 }
